@@ -24,10 +24,10 @@ int main(int argc, const char * argv[]) {
 clang main.m -w -framework Foundation -o main
 ```
 
-运行编译后生成的二进制文件：
+运行编译后生成的二进制文件（-t 表示参数）：
 
 ```sh
-./main
+./main -t arg1 arg2
 ```
 
 ### 数据类型
@@ -210,9 +210,9 @@ Objective-C 虽然也是面向对象的语言，但是如果你像我一样之�
 属性背后其实也依赖于实例属性，它会自动生成为我们生产一个 `_perpertyName` 的幕后属性 (*backing field*)，假如我们想要在实现类中使用不一样的名字，可以使用 `synthesize` 自定义：
 
 ```objective-c
-@implementation YourClass
+@implementation Person
 
-@synthesize propertyName = instanceVariableName;
+@synthesize name = instanceVariableName;
 
 @end
 ```
@@ -238,8 +238,8 @@ Objective-C 虽然也是面向对象的语言，但是如果你像我一样之�
 通常我们只会在实现类中定义实例属性。
 
 ```objective-c
-@implementation SomeClass {
-    NSString *_myNonPropertyInstanceVariable;
+@implementation MyClass {
+  NSString *_myNonPropertyInstanceVariable;
 }
 ```
 
@@ -247,19 +247,39 @@ Objective-C 虽然也是面向对象的语言，但是如果你像我一样之�
 
 #### Methods
 
-前面提到过，Objective-C 中的方法有两种，一种是类方法，一种是实例方法，分别使用方法前面的 `+` 和 `-` 表示。除此之外，实现类中的方法通常由四部分组成，返回值+方法名+可选的方法参数+方法体。
+前面提到过，Objective-C 中的方法有两种，一种是类方法，一种是实例方法，分别使用方法前面的 `+` 和 `-` 表示。除此之外，实现类中的方法通常由这几个部分组成：方法类型+返回值+方法名+可选的方法参数+方法体。
 
 ```objective-c
-- (void)myMethod:(int)arg1, param:(NSString *)arg2 {
+- (void)myMethod:(int)arg1, name:(NSString *)arg2 {
   // do something
 }
 ```
 
-可以看到，和其它编程语言不同的地方在于，方法的参数和参数值是分开表示的，而且参数也是方法的一部分，调用的时候需要将参数一一列出：
+可以看到，和其它编程语言不同的地方在于，方法的参数名和参数值是分开表示的，而且参数名也是方法的一部分。因此，整个方法的方法名是：
 
 ```objective-c
-[myClass meMethod:1 param:@"arg2"];
+myMethod:name:
 ```
+
+当我们调用一个方法的时候，需要用中括号将对象引用和方法括起来，如果方法有多个参数，还需要将参数名称一一列出，中间使用空格分割，并在冒号后表示实际参数：
+
+```objective-c
+[myClass myMethod:42 name:@"arg2"];
+```
+
+需要注意的是，Objective-C 中还有一个 [Message](https://developer.apple.com/library/archive/documentation/General/Conceptual/DevPedia-CocoaCore/Message.html#//apple_ref/doc/uid/TP40008195-CH59-SW1) 的概念，当我们用以上的形式调用一个方法时，本质上是发送了一个消息给对象实例，编译器会将所有的方法都编译成下面这个形式：
+
+```objective-c
+id objc_msgSend(id self, SEL op, ...);
+```
+
+上面的 [`objc_msgSend`](https://developer.apple.com/documentation/objectivec/1456712-objc_msgsend) 是用于发送消息的方法。也就是说，当我们调用 `myMethod` 的时候，本质上是调用的是：
+
+```objective-c
+objc_msgSend(myClass, @selector(myMethod:name:), 42, @"arg2");
+```
+
+关于 [selector](#selectors) 的用法下面会再具体介绍。
 
 ##### Constructors
 
@@ -292,11 +312,47 @@ Objective-C 虽然也是面向对象的语言，但是如果你像我一样之�
 
 ##### Selectors
 
+Selector 是在对象上执行的方法的名称，编译器会将所有的方法都编译成 selector 来执行。当我们使用 selector 的时候，通常是为了实现动态分配执行方法。
 
+Selector 用 [`SEL`](https://developer.apple.com/documentation/objectivec/sel/) 表示，一般有两种方式创建：
 
-#### Class Lifecycles
+```objective-c
+SEL sel = @selector(methodName);
+```
 
-Objective-C 中的类也有生命周期，而且在创建和销毁的过程中还需要我们去管理内存的释放，这点以后会慢慢提到。
+当我们不知道方法名时，可以通过运行时方法 `NSSelectorFromString` 创建 selector：
+
+```objective-c
+SEL sel = NSSelectorFromString(dynamicMethodsString);
+```
+
+在使用 selector 之前，通常需要先进行判断，确保方法可以执行：
+
+```objective-c
+if ([myClass respondsToSelector:sel]) {
+  // 调用方法
+  [myClass performSelector:selectorVar];
+}
+```
+
+除了以上这种调用方法之外，我们还可以使用 [block](#blocks) 动态调用方法：
+
+```objective-c
+if ([myClass respondsToSelector:sel]) {
+  // 获取实现的方法
+  IMP imp = [myClass methodForSelector:sel];
+  // 将 imp 对象转换为 block 对象
+  void (*func)(id, SEL, NSString*) = (void *)imp;
+  // 调用方法
+  func(myClass, sel, @"newArg");
+}
+```
+
+上面的例子中，我们使用了 [`methodForSelector`](https://developer.apple.com/documentation/objectivec/nsobject/1418863-methodforselector/) 定位到方法，然后将其转换为 block 并执行。不过，由于 [`performSelector`](https://developer.apple.com/documentation/objectivec/1418956-nsobject/1418867-performselector) 方法的限制，方法的参数最多只能有两个。
+
+#### Lifecycles
+
+Objective-C 中的类也有生命周期，而且还需要我们去管理内存的释放，这点会在[内存管理](#内存管理)部分详细介绍。
 
 ```objective-c
 // 任何类在实例化之前都会先调用该方法
@@ -313,6 +369,8 @@ Objective-C 中的类也有生命周期，而且在创建和销毁的过程中�
 ```
 
 #### Extensions
+
+
 
 ### Others
 
@@ -346,6 +404,8 @@ Objective-C 中的类也有生命周期，而且在创建和销毁的过程中�
 ```
 
 #### Categories
+
+
 
 #### Blocks
 

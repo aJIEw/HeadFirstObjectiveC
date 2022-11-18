@@ -6,7 +6,7 @@ int main(int argc, const char * argv[]) {
   NSLog(@"Hello World!");
 
 
-  // ============ Primitive types =============
+  NSLog(@"============ Primitive types =============");
   int primitiveInt  = 1;
   long primitiveLong = 1;
   float primitiveFloat = 1.0f;
@@ -26,18 +26,18 @@ int main(int argc, const char * argv[]) {
   }
 
 
-  // ============ Objective-C basic objects =============
+  NSLog(@"============ Objective-C basic objects =============");
   NSNumber *fortyTwoLongNumber = @42L;
   long fortyTwoLong = [fortyTwoLongNumber longValue];
-  NSLog(@"%li", fortyTwoLong);
+  NSLog(@"fortyTwoLong = %li", fortyTwoLong);
 
   NSArray *array = @[@1, @2L, @3.0F, @4U, @"5"];
-  NSLog(@"%@", array[2]);
+  NSLog(@"array[2] = %@", array[2]);
   NSMutableArray *mutableArray = [NSMutableArray arrayWithCapacity:2];
   [mutableArray addObject:@"Hello"];
   [mutableArray addObject:@"World"];
   [mutableArray removeObjectAtIndex:0];
-  NSLog(@"%@", [mutableArray objectAtIndex:0]);
+  NSLog(@"mutableArray call: %@", [mutableArray objectAtIndex:0]);
 
   NSDictionary<NSString *, NSObject *> *dictionary = @{ @"name" : @"Objective-C", @"birth" : @1992};
   NSObject *dName = dictionary[@"name"];
@@ -48,7 +48,7 @@ int main(int argc, const char * argv[]) {
   NSLog(@"set = %@", set);
 
 
-  // ============ Class objects =============
+  NSLog(@"============ Class objects =============");
   Person *p =[Person createWithName:@"jun"];
   [p changeName:@"aJIEw"];
   [p sayHi:@"Hello" message: @"Objective-C"];
@@ -57,7 +57,26 @@ int main(int argc, const char * argv[]) {
   NSLog(@"retired %d", p.retired);
 
 
-  // ============ Blocks =============
+  NSLog(@"============ Selector with dynamic call =============");
+  // run with ./a.out -t performWork sayHi:message:
+  if (argc > 2) {
+    NSLog(@"argc = %i", argc);
+    for (int i = 2; i < argc; i++) {
+      NSString *method = [NSString stringWithUTF8String: argv[i]];
+      NSLog(@"method = %@", method);
+      SEL sel = NSSelectorFromString(method);
+      if ([p respondsToSelector:sel]) {
+        IMP imp = [p methodForSelector:sel];
+        void (*func)(id, SEL, NSString*, NSString*) = (void *)imp;
+        func(p, sel, @"Hey", @"Objective-C");
+
+        // [p performSelector:sel withObject:@"Hey" withObject:@"Objective-C"];
+      }
+    }
+  }
+  
+
+  NSLog(@"============ Blocks example ============");
   void (^simpleBlock)(void);
   simpleBlock = ^{
     NSLog(@"This is a block");

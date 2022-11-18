@@ -1,8 +1,12 @@
 #import <Foundation/Foundation.h>
 
-@protocol Career <NSObject>
+@protocol Worker <NSObject>
 
   @property BOOL retired;
 
+  - (void)punchIn;
+
   - (void)performWork;
+
+  - (void)punchOut;
 @end

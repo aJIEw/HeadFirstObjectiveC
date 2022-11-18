@@ -41,8 +41,16 @@
 #pragma mark - Career protocol
 @synthesize retired = _retired;
 
+- (void)punchIn {
+  NSLog(@"punch in.");
+}
+
 - (void)performWork {
   NSLog(@"do some work.");
+}
+
+- (void)punchOut {
+  NSLog(@"punch in.");
 }
 
 #pragma mark - Class methods

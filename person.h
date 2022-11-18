@@ -1,8 +1,8 @@
-#import "career.h"
+#import "worker.h"
 
 #import <Foundation/Foundation.h>
 
-@interface Person : NSObject<Career>
+@interface Person : NSObject<Worker>
 
 @property (assign) NSString *name;
 
