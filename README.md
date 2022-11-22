@@ -1,3 +1,7 @@
+> 一个安卓开发者的 Objective-C 学习笔记。
+
+## HeadFirstObjectiveC
+
 Objective-C 主要用于开发 macOS/iOS/iPadOS 等平台上的应用，看它的名字就可以猜到，这是一门基于 C 的面向对象的编程语言。
 
 ### 程序入口
@@ -144,7 +148,7 @@ NSLog(@"set = %@", set);
 
 Objective-C 虽然也是面向对象的语言，但是如果你像我一样之前没有接触过 C，那么第一点感到不适应的地方可能会是：为什么所有的类都要分别创建一个 `.h` 和一个 `.m` 文件呢？为什么要在 `.h` 文件中定义所有的属性和方法，然后再在 `.m` 文件中去实现呢？
 
-其实这主要是因为过去的编程范式遗留下来的习惯，为了最大程度地复用代码，同时也保证了代码的清晰度，而且编译器也能根据 `.h` 文件来决定哪些属性和方法会被编译到最终生成的可执行文件中。[^注1]
+其实这主要是因为过去的编程范式遗留下来的习惯，为了最大程度地复用代码，同时也保证了代码的清晰度，而且编译器也能根据 `.h` 文件来决定哪些属性和方法会被编译到最终生成的可执行文件中。[^1]
 
 如下所示，我们创建了一个 `person.h` 和 `person.m` 文件，其中定义和实现了 Person 类：
 
@@ -202,7 +206,7 @@ Objective-C 虽然也是面向对象的语言，但是如果你像我一样之�
 除了 `readonly` 之外，默认的 attribute 还有：
 
 - `assign`: 赋值，告诉编译期生成 setter 方法。
-- `retain`: 等同于 `strong`，也就是强引用，保持引用直到所有对象都释放了它。
+- `retain`: 等同于 `strong`，也就是强引用，保持引用直到所有对象都释放了它，旧值被释放新值被赋值。
 - `atomic`: 保持原子性，只有单个线程能访问它，线程安全但是效率更低。
 
 ##### `synthesize`
@@ -567,8 +571,42 @@ double (^addBlock)(double, double) =
 
 更多 block 的语法可以参考[这个回答](https://stackoverflow.com/questions/7936570/objective-c-pass-block-as-parameter/32225544#32225544)。
 
-
 #### 内存管理
+
+Objective-C 中并没有 Java 中的垃圾回收机制，我们必须自行管理内存。Objective-C 中使用引用计数的方式管理内存，当我们创建一个对象时，对应的内存也会被创建并分配给该对象，我们即拥有了 (*own*) 该对象，此时引用计数 +1。只要我们还持有该引用，该对象就会持续存在，不会被释放 (*deallocate*)。而当我们释放 (*release*) 了该对象，引用计数 -1，若引用计数减到 0 时，该对象才会从内存中被移出。
+
+```objective-c
+// 创建对象
+MyClass *classVar = [[MyClass alloc] init];
+
+// 使用对象
+[classVar doSomething];
+
+// 释放对象
+[classVar release];
+```
+
+由于手动管理内存麻烦且容易出错，从 Xcode 4.2 和 iOS 4 开始，引入了 Automatic Reference Counting 来帮助我们管理内存。
+
+```objective-c
+// 默认值，变量会被保存在内存中直到离开作用域
+__strong NSString *strongString;
+
+// 弱引用，假如引用的对象被释放，那么弱引用会被设为 nil
+__weak NSSet *weakSet;
+
+// 与弱引用类似，但是如果引用的对象被释放，引用也不会被设为 nil
+__unsafe_unretained NSArray *unsafeArray;
+```
+
+对于类的属性而言，默认会是 `strong` 的，也就是会在内存中被保存直到对象被释放；而如果属性是 `weak` 的，则当引用计数减到零后，属性接收到的值会变成 nil。
+
+```objective-c
+// 默认值
+@property (strong) MyClass *strongVar;
+// 改为弱引用
+@property (weak) MyClass *weakVar;
+```
 
 #### Q & A
 
@@ -586,5 +624,5 @@ double (^addBlock)(double, double) =
 
 
 
-[^注1]: 参考这个回答：https://stackoverflow.com/a/2620632/4837812
+[^1]: 参考这个回答：https://stackoverflow.com/a/2620632/4837812
 
