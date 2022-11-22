@@ -1,11 +1,24 @@
 #import "person.h"
 
+#pragma mark Extension
+@interface Person ()
+
+@property NSString *firstName;
+
+@property NSString *lastName;
+
++ (instancetype)createWithName:(NSString *)name;
+
+@end
+
+#pragma mark -
+#pragma mark Person implementation
 @implementation Person {
   NSString *_nickName;
   @private int _age;
 }
 
-#pragma mark - Lifecycle methods
+#pragma mark Lifecycle methods
 + (void)initialize {
   NSLog(@"called in initialize");
 }
@@ -18,7 +31,7 @@
   [super dealloc];
 }
 
-#pragma mark - Constructor methods
+#pragma mark Constructor methods
 - (id)init {
   self = self = [super init];
   // Check parent class init success, may return nil
@@ -38,7 +51,7 @@
   return self;
 }
 
-#pragma mark - Career protocol
+#pragma mark Career protocol
 @synthesize retired = _retired;
 
 - (void)punchIn {
@@ -50,10 +63,10 @@
 }
 
 - (void)punchOut {
-  NSLog(@"punch in.");
+  NSLog(@"punch out.");
 }
 
-#pragma mark - Class methods
+#pragma mark Class methods
 + (instancetype)createWithName:(NSString *)name {
   Person *p = [[self alloc] init];
   p.name = name;
@@ -61,7 +74,12 @@
   return p;
 }
 
-#pragma mark - Instance methods
+#pragma mark Instance methods
+- (void)setFirstName:(NSString *)firstName {
+  _firstName = firstName;
+   NSLog(@"setFirstName %@", firstName);
+}
+
 - (void)changeName:(NSString *)name {
   [self setName: name];
   NSLog(@"change name to %@", _name);
@@ -73,8 +91,8 @@
 }
 
 - (void)sayHi:(NSString *)greeting message:(NSString *)msg {
-  NSLog(@"%@, %@ aka %@(%li)! Welcome to the world of %@!", 
-          greeting, _name, _nickName, _age, msg);
+  NSLog(@"%@, %@ %@ aka %@(%li)! Welcome to the world of %@!", 
+          greeting, _name, _firstName, _nickName, _age, msg);
 }
 
 @end

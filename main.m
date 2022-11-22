@@ -1,4 +1,6 @@
 #import "person.h"
+#import "person+read.h"
+#import "result.h"
 
 #import <Foundation/Foundation.h>
 
@@ -50,11 +52,13 @@ int main(int argc, const char * argv[]) {
 
   NSLog(@"============ Class objects =============");
   Person *p =[Person createWithName:@"jun"];
+  [p setFirstName:@"Chen"];
   [p changeName:@"aJIEw"];
   [p sayHi:@"Hello" message: @"Objective-C"];
   [p performWork];
+  [p punchOut];
   [p changeRetireStatus:YES];
-  NSLog(@"retired %d", p.retired);
+  [p read:@"a book"];
 
 
   NSLog(@"============ Selector with dynamic call =============");
@@ -74,6 +78,12 @@ int main(int argc, const char * argv[]) {
       }
     }
   }
+
+
+  NSLog(@"============ Generic example =============");
+  Result<NSNumber *> *r = [[Result alloc] init];
+  [r handleSuccess:^void (NSNumber * result) { NSLog(@"result: %i", [result intValue]); } 
+           failure:^void (NSError *) { NSLog(@"error"); } ];
   
 
   NSLog(@"============ Blocks example ============");

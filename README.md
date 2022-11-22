@@ -21,10 +21,10 @@ int main(int argc, const char * argv[]) {
 我们可以使用 [clang](https://opensource.apple.com/source/clang/clang-23/clang/tools/clang/docs/UsersManual.html) 或 [gcc](https://opensource.apple.com/source/clang/clang-23/clang/tools/clang/docs/UsersManual.html) 编译 OC 源文件：
 
 ```shell
-clang main.m -w -framework Foundation -o main
+clang main.m file1.m file2.m -w -framework Foundation -o main
 ```
 
-运行编译后生成的二进制文件（-t 表示参数）：
+运行编译后生成的二进制文件（-t 表示命令行参数）：
 
 ```sh
 ./main -t arg1 arg2
@@ -201,13 +201,13 @@ Objective-C 虽然也是面向对象的语言，但是如果你像我一样之�
 
 除了 `readonly` 之外，默认的 attribute 还有：
 
-- `assign`: 赋值，告诉编译期生成 setter 方法
+- `assign`: 赋值，告诉编译期生成 setter 方法。
 - `retain`: 等同于 `strong`，也就是强引用，保持引用直到所有对象都释放了它。
 - `atomic`: 保持原子性，只有单个线程能访问它，线程安全但是效率更低。
 
 ##### `synthesize`
 
-属性背后其实也依赖于实例属性，它会自动生成为我们生产一个 `_perpertyName` 的幕后属性 (*backing field*)，假如我们想要在实现类中使用不一样的名字，可以使用 `synthesize` 自定义：
+属性背后其实也依赖于实例属性，它会自动生成为我们生产一个 `_perpertyName` 的幕后属性 (*backing field*)，假如我们想要在实现类中使用不一样的名字，可以使用 `@synthesize` 自定义：
 
 ```objective-c
 @implementation Person
@@ -222,8 +222,11 @@ Objective-C 虽然也是面向对象的语言，但是如果你像我一样之�
 ```objective-c
 - (void)changeName {
   NSString *var = @"Objective-C";
-  // 通过 backing field 访问
-  _name = var;
+  // 通过幕后属性访问
+  // _name = var;
+  
+  // 使用 @synthesize 替代幕后属性
+  // instanceVariableName = var;
   
   // 通过 setter
   [self setName:var];
@@ -341,7 +344,7 @@ if ([myClass respondsToSelector:sel]) {
 if ([myClass respondsToSelector:sel]) {
   // 获取实现的方法
   IMP imp = [myClass methodForSelector:sel];
-  // 将 imp 对象转换为 block 对象
+  // 将 IMP 对象转换为 block 对象
   void (*func)(id, SEL, NSString*) = (void *)imp;
   // 调用方法
   func(myClass, sel, @"newArg");
@@ -370,7 +373,68 @@ Objective-C 中的类也有生命周期，而且还需要我们去管理内存�
 
 #### Extensions
 
+Extensions 用于扩展类的属性和方法。
 
+```objective-c
+// Extension 通常和实现类放在一起
+@interface Person () // 声明扩展类的语法是：在类名后 + ()
+
+// 添加一个扩展属性
+@property NSString *firstName;
+  
+// 添加一个扩展方法
++ (instancetype)createWithName:(NSString *)name;
+
+@end
+```
+
+#### Generic
+
+从 Xcode 7 开始支持声明泛型类，使用关键字 `__covariant`：
+
+```objective-c
+@interface Result<__covariant A> : NSObject
+
+// 使用 block 作为方法参数
+- (void)handleSuccess:(void (^)(A))success
+              failure:(void (^)(NSError *))failure;
+
+@end
+```
+
+由于编译期不支持在实现类中使用泛型，所以实现类中需要使用 `id`：
+
+```objective-c
+@implementation Result
+
+- (void)handleSuccess:(void (^)(id))success
+              failure:(void (^)(NSError *))failure {
+  // 假设调用成功，返回值是 42
+  success(@42);
+}
+```
+
+使用：
+
+```objective-c
+Result<NSNumber *> *r = [[Result alloc] init];
+  [r handleSuccess:^void (NSNumber * result) { NSLog(@"result: %i", [result intValue]); } 
+           failure:^void (NSError *) { NSLog(@"error"); } ];
+```
+
+当我们将返回值修改为字符串时：
+
+```objective-c
+success(@"ok");
+```
+
+对应的处理结果是：
+
+```objective-c
+Result<NSString *> *r = [[Result alloc] init];
+  [r handleSuccess:^void (NSString * result) { NSLog(@"result: %@", result); } 
+           failure:^void (NSError *) { NSLog(@"error"); } ];
+```
 
 ### Others
 
@@ -379,7 +443,7 @@ Objective-C 中的类也有生命周期，而且还需要我们去管理内存�
 协议类似于接口 (*Interface*) 的概念，我们可以在 `@protocol` 中定义方法和属性，然后交由其它类去实现。
 
 ```objective-c
-@protocol Career <NSObject>
+@protocol Worker <NSObject>
 
   @property BOOL retired;
 
@@ -387,14 +451,20 @@ Objective-C 中的类也有生命周期，而且还需要我们去管理内存�
 @end
 ```
 
-使用某个协议的类，必须实现该协议中所有的属性和方法。
+通常，我们在声明类时将协议作为泛型类型使用：
+
+```objective-c
+@interface Person : NSObject<Worker>
+```
+
+在实现类中实现协议中的方法：
 
 ```objective-c
 // 下面这行注释会在文件和导航栏中添加一条分割线
 #pragma mark -
 // pragma mark 是一种特殊的管理代码的注释，方便我们在 XCode 导航栏中跳转到页面的各个区域
 #pragma mark Career protocol
-// 如果需要在实现类中使用 protocol 中的属性，必须使用 synthesize 暴露出属性
+// 如果需要在实现类中使用 protocol 中的属性，必须使用 synthesize 暴露出该属性
 @synthesize retired = _retired;
 
 // 实现 protocol 中的方法
@@ -405,7 +475,48 @@ Objective-C 中的类也有生命周期，而且还需要我们去管理内存�
 
 #### Categories
 
+Categories 同样用于扩展一个类，它和 extensions 的最大的区别是，extensions 中扩展的方法一般只能用于某一个特定的实现类，但是 categories 为某个类添加的扩展方法可以用于所有的类，包括子类。
 
+定义 category 和定义类的方式相同，需要先声明头文件，然后再在实现类中实现方法。通常情况下，文件名是实现的基类名+category 名，比如下面的这个例子中，为 `Person` 类添加了阅读相关的方法，那么，文件名就是 `person+read.h`。
+
+```objective-c
+#import "person.h"
+
+// 类后括号内就是这个 category 的名字
+@interface Person (Read)
+
+// 添加的方法
+- (void)read:(NSString *)material;
+
+@end
+```
+
+实现类：
+
+```objective-c
+#import "person+read.h"
+
+@implementation Person (Read)
+
+- (void)read:(NSString *)material {
+  NSLog(@"I'm reading %@", material);
+}
+
+@end
+```
+
+当需要调用 category 中的方法时，只需要导入 category 即可：
+
+```objective-c
+#import "person+read.h"
+#import "person.h"
+
+...
+- (void)someMethod {
+  Person *p = [[Person alloc] init];
+  [p read:@"a book"];
+}
+```
 
 #### Blocks
 
@@ -454,9 +565,26 @@ double (^addBlock)(double, double) =
   };
 ```
 
-### 内存管理
+更多 block 的语法可以参考[这个回答](https://stackoverflow.com/questions/7936570/objective-c-pass-block-as-parameter/32225544#32225544)。
+
+
+#### 内存管理
+
+#### Q & A
+
+##### 如何理解指针？
+
+当我们使用指针时，我们其实是在引用一个对象的地址，而不是直接使用堆 (*heap*) 中创建的对象，这样，当我们传递对象并且对象被改变时，由于使用的是引用，我们能够得到改变后的对象。由于 Objecgive-C 是一门面向对象的语言，当我们创建一个对象时，大多数时候都应该使用指针。
+
+##### `id` 和 `void *` 的区别？
+
+`id` 表示一个指向 Objective-C 对象的指针，而 `void *` 可以表示为任何指针。
+
+另外，使用 `id` 声明对象时编辑器不会报错，只有在运行时才会提示错误，所以，推荐使用 `NSObject *` 而不是直接使用 `id` 创建一个代表任何类的对象。
 
 
 
-[^注1]: 请参考这个回答：https://stackoverflow.com/a/2620632/4837812
+
+
+[^注1]: 参考这个回答：https://stackoverflow.com/a/2620632/4837812
 
